@@ -565,7 +565,9 @@ def checkSqlInjection(place, parameter, value):
             warnMsg += "problems during data retrieval"
             logger.warn(warnMsg)
 
-        injection = checkFalsePositives(injection)
+        if not conf.ignoreFalsePositive:
+            injection = checkFalsePositives(injection)
+
     else:
         injection = None
 
