@@ -369,6 +369,9 @@ def getValue(expression, blind=True, union=True, error=True, time=True, fromUser
     if conf.hexConvert:
         charsetType = CHARSET_TYPE.HEXADECIMAL
 
+    if conf.useHexBasedString:
+        expression = expression.replace("'","")
+
     kb.safeCharEncode = safeCharEncode
     kb.resumeValues = resumeValue
 
