@@ -188,6 +188,9 @@ def cmdLineParser():
                                 "for, provide custom injection payloads and "
                                 "optional tampering scripts")
 
+        injection.add_option("--seo-delimiter", dest="seoDelimiter",
+                             help="delimiter between parameters (used for SEO URL)")
+
         injection.add_option("-p", dest="testParameter",
                              help="Testable parameter(s)")
 
@@ -225,6 +228,12 @@ def cmdLineParser():
 
         injection.add_option("--tamper", dest="tamper",
                              help="Use given script(s) for tampering injection data")
+
+        injection.add_option("--ignore-false-positive", action="store_true", dest="ignoreFalsePositive",
+                             help="ignore checking false positive")
+
+        injection.add_option("--use-hex-based-string", action="store_true", dest="useHexBasedString",
+                             help="use hex-based string")
 
         # Detection options
         detection = OptionGroup(parser, "Detection", "These options can be "
