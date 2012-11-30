@@ -262,7 +262,7 @@ class Connect:
             elif target:
                 if PLACE.GET in conf.parameters and not get:
                     get = conf.parameters[PLACE.GET]
-
+                
                 if get:
                     if conf.seoDelimiter:
                         url = "%s%s" % (url, get)
@@ -699,7 +699,9 @@ class Connect:
                         else:
                             get += "%s%s=%s" % (delimiter, name, value)
 
-        get = urlencode(get, limit=True)
+        if not skipUrlEncode:
+            get = urlencode(get, limit=True)
+
         if post is not None:
             if place not in (PLACE.POST, PLACE.CUSTOM_POST) and hasattr(post, UNENCODED_ORIGINAL_VALUE):
                 post = getattr(post, UNENCODED_ORIGINAL_VALUE)
