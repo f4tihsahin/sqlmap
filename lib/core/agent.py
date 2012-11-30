@@ -127,9 +127,13 @@ class Agent:
             retVal = retVal.replace(CUSTOM_INJECTION_MARK_CHAR, "").replace(ASTERISK_MARKER, CUSTOM_INJECTION_MARK_CHAR)
         elif place in (PLACE.USER_AGENT, PLACE.REFERER, PLACE.HOST):
             retVal = paramString.replace(origValue, self.addPayloadDelimiters(newValue))
+        elif conf.seoDelimiter:
+                paramSplit = paramString[1:].split(conf.seoDelimiter)
+                paramSplit[int(parameter)] = self.addPayloadDelimiters(newValue)
+                retVal = paramString[0]+conf.seoDelimiter.join(paramSplit)
         else:
             retVal = paramString.replace("%s=%s" % (parameter, origValue),
-                                           "%s=%s" % (parameter, self.addPayloadDelimiters(newValue)))
+                                       "%s=%s" % (parameter, self.addPayloadDelimiters(newValue)))
 
         return retVal
 

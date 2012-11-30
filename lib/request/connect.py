@@ -264,8 +264,12 @@ class Connect:
                     get = conf.parameters[PLACE.GET]
 
                 if get:
-                    url = "%s?%s" % (url, get)
-                    requestMsg += "?%s" % get
+                    if conf.seoDelimiter:
+                        url = "%s%s" % (url, get)
+                        requestMsg += "%s" % get
+                    else:
+                        url = "%s?%s" % (url, get)
+                        requestMsg += "?%s" % get
 
                 if conf.method == HTTPMETHOD.POST and not post:
                     for place in (PLACE.POST,):

@@ -270,12 +270,18 @@ def start():
             testSqlInj = False
 
             if PLACE.GET in conf.parameters and not any([conf.data, conf.testParameter]):
-                for parameter in re.findall(r"([^=]+)=([^%s]+%s?|\Z)" % (conf.pDel or ";", conf.pDel or ";"), conf.parameters[PLACE.GET]):
-                    paramKey = (conf.hostname, conf.path, PLACE.GET, parameter[0])
+                if conf.seoDelimiter:
+                    for count in range(len(conf.parameters[PLACE.GET].split(conf.seoDelimiter))):
+                        if count not in kb.testedParams:
+                            testSqlInj = True
+                            break       
+                else:            
+                    for parameter in re.findall(r"([^=]+)=([^%s]+%s?|\Z)" % (conf.pDel or ";", conf.pDel or ";"), conf.parameters[PLACE.GET]):
+                        paramKey = (conf.hostname, conf.path, PLACE.GET, parameter[0])
 
-                    if paramKey not in kb.testedParams:
-                        testSqlInj = True
-                        break
+                        if paramKey not in kb.testedParams:
+                            testSqlInj = True
+                            break
             else:
                 paramKey = (conf.hostname, conf.path, None, None)
                 if paramKey not in kb.testedParams:
@@ -438,7 +444,7 @@ def start():
                             logger.info(infoMsg)
 
                         # Ignore session-like parameters for --level < 4
-                        elif conf.level < 4 and parameter.upper() in IGNORE_PARAMETERS:
+                        elif conf.level < 4 and str(parameter).upper() in IGNORE_PARAMETERS:
                             testSqlInj = False
 
                             infoMsg = "ignoring %s parameter '%s'" % (place, parameter)

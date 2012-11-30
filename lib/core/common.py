@@ -514,36 +514,55 @@ def paramToDict(place, parameters=None):
 
     parameters = parameters.replace(", ", ",")
     parameters = re.sub(r"&(\w{1,4});", r"%s\g<1>%s" % (PARAMETER_AMP_MARKER, PARAMETER_SEMICOLON_MARKER), parameters)
-    splitParams = parameters.split(conf.pDel or (DEFAULT_COOKIE_DELIMITER if place == PLACE.COOKIE else DEFAULT_GET_POST_DELIMITER))
 
-    for element in splitParams:
-        element = re.sub(r"%s(.+?)%s" % (PARAMETER_AMP_MARKER, PARAMETER_SEMICOLON_MARKER), r"&\g<1>;", element)
-        elem = element.split("=")
-
-        if len(elem) >= 2:
-            parameter = elem[0].replace(" ", "")
-
+    if conf.seoDelimiter and place == PLACE.GET:
+        splitParams = parameters[1:].split(conf.seoDelimiter)
+        for count in range(len(splitParams)):
+            parameter = str(count)
             condition = not conf.testParameter
-            condition |= parameter in conf.testParameter
+            condition |= parameter in conf.testParameter                
 
             if condition:
-                testableParameters[parameter] = "=".join(elem[1:])
-                if not conf.multipleTargets:
-                    _ = urldecode(testableParameters[parameter], convall=True)
-                    if _.strip(DUMMY_SQL_INJECTION_CHARS) != _\
-                        or re.search(r'\A9{3,}', _) or re.search(DUMMY_USER_INJECTION, _):
-                        warnMsg = "it appears that you have provided tainted parameter values "
-                        warnMsg += "('%s') with most probably leftover " % element
-                        warnMsg += "chars from manual SQL injection "
-                        warnMsg += "tests (%s) or non-valid numerical value. " % DUMMY_SQL_INJECTION_CHARS
-                        warnMsg += "Please, always use only valid parameter values "
-                        warnMsg += "so sqlmap could be able to properly run "
-                        logger.warn(warnMsg)
+                testableParameters[parameter] = splitParams[count]
+                if testableParameters[parameter].strip(DUMMY_SQL_INJECTION_CHARS) != testableParameters[parameter]:
+                    errMsg = "you have provided tainted parameter values "
+                    errMsg += "(%s) with most probably leftover " % splitParams[count]
+                    errMsg += "chars from manual sql injection "
+                    errMsg += "tests (%s). " % DUMMY_SQL_INJECTION_CHARS
+                    errMsg += "please, always use only valid parameter values "
+                    errMsg += "so sqlmap could be able to do a valid run."
+                    raise sqlmapSyntaxException, errMsg
+    else:
+        splitParams = parameters.split(conf.pDel or (DEFAULT_COOKIE_DELIMITER if place == PLACE.COOKIE else DEFAULT_GET_POST_DELIMITER))
 
-                        message = "Are you sure you want to continue? [y/N] "
-                        test = readInput(message, default="N")
-                        if test[0] not in ("y", "Y"):
-                            raise sqlmapSilentQuitException
+        for element in splitParams:
+            element = re.sub(r"%s(.+?)%s" % (PARAMETER_AMP_MARKER, PARAMETER_SEMICOLON_MARKER), r"&\g<1>;", element)
+            elem = element.split("=")
+
+            if len(elem) >= 2:
+                parameter = elem[0].replace(" ", "")
+
+                condition = not conf.testParameter
+                condition |= parameter in conf.testParameter
+
+                if condition:
+                    testableParameters[parameter] = "=".join(elem[1:])
+                    if not conf.multipleTargets:
+                        _ = urldecode(testableParameters[parameter], convall=True)
+                        if _.strip(DUMMY_SQL_INJECTION_CHARS) != _\
+                            or re.search(r'\A9{3,}', _) or re.search(DUMMY_USER_INJECTION, _):
+                            warnMsg = "it appears that you have provided tainted parameter values "
+                            warnMsg += "('%s') with most probably leftover " % element
+                            warnMsg += "chars from manual SQL injection "
+                            warnMsg += "tests (%s) or non-valid numerical value. " % DUMMY_SQL_INJECTION_CHARS
+                            warnMsg += "Please, always use only valid parameter values "
+                            warnMsg += "so sqlmap could be able to properly run "
+                            logger.warn(warnMsg)
+
+                            message = "Are you sure you want to continue? [y/N] "
+                            test = readInput(message, default="N")
+                            if test[0] not in ("y", "Y"):
+                                raise sqlmapSilentQuitException
 
     if conf.testParameter and not testableParameters:
         paramStr = ", ".join(test for test in conf.testParameter)
@@ -1066,7 +1085,12 @@ def parseTargetUrl():
     hostnamePort = urlSplit[1].split(":") if not re.search("\[.+\]", urlSplit[1]) else filter(None, (re.search("\[.+\]", urlSplit[1]).group(0), re.search("\](:(?P<port>\d+))?", urlSplit[1]).group("port")))
 
     conf.scheme = urlSplit[0].strip().lower() if not conf.forceSSL else "https"
-    conf.path = urlSplit[2].strip()
+
+    if conf.seoDelimiter:    
+        conf.path = "/"
+    else:
+        conf.path = urlSplit[2].strip()
+
     conf.hostname = hostnamePort[0].strip()
 
     conf.ipv6 = conf.hostname != conf.hostname.strip("[]")
@@ -1094,6 +1118,10 @@ def parseTargetUrl():
 
     if urlSplit[3]:
         conf.parameters[PLACE.GET] = urldecode(urlSplit[3]) if urlSplit[3] and urlencode(DEFAULT_GET_POST_DELIMITER, None) not in urlSplit[3] else urlSplit[3]
+    elif conf.seoDelimiter:
+        if len(urlSplit[2]) > 1:
+            conf.parameters[PLACE.GET] = urldecode(urlSplit[2][1:])
+
 
     conf.url = getUnicode("%s://%s:%d%s" % (conf.scheme, ("[%s]" % conf.hostname) if conf.ipv6 else conf.hostname, conf.port, conf.path))
     conf.url = conf.url.replace(URI_QUESTION_MARKER, '?')
@@ -2785,6 +2813,8 @@ def unsafeSQLIdentificatorNaming(name):
             prefix = "%s." % DEFAULT_MSSQL_SCHEMA
             if retVal.startswith(prefix):
                 retVal = retVal[len(prefix):]
+    if conf.useHexBasedString:
+        return "0x"+"".join([hex(ord(c))[2:] for c in retVal])
 
     return retVal
 
